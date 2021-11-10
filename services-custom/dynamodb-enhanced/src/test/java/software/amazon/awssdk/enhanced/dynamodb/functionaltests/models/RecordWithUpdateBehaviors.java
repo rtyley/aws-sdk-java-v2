@@ -36,6 +36,8 @@ public class RecordWithUpdateBehaviors {
     private Instant createdAutoUpdateOn;
     private Instant lastAutoUpdatedOn;
     private Long version;
+    private Long counter;
+    private String attribute1;
     private Instant lastAutoUpdatedOnMillis;
     private Instant formattedLastAutoUpdatedOn;
 
@@ -64,6 +66,20 @@ public class RecordWithUpdateBehaviors {
 
     public void setLastUpdatedOn(Instant lastUpdatedOn) {
         this.lastUpdatedOn = lastUpdatedOn;
+    }
+
+    public Long getCounter() {
+        return counter;
+    }
+    public void setCounter(Long counter) {
+        this.counter = counter;
+    }
+
+    public String getAttribute1() {
+        return attribute1;
+    }
+    public void setAttribute1(String attribute1) {
+        this.attribute1 = attribute1;
     }
 
 

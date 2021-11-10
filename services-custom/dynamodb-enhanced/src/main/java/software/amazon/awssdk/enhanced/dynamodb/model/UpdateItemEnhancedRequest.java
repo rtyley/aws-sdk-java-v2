@@ -43,6 +43,7 @@ public final class UpdateItemEnhancedRequest<T> {
     private final Expression conditionExpression;
     private final String returnConsumedCapacity;
     private final String returnItemCollectionMetrics;
+    private final Integer counterDelta;
 
 
     private UpdateItemEnhancedRequest(Builder<T> builder) {
@@ -51,6 +52,7 @@ public final class UpdateItemEnhancedRequest<T> {
         this.conditionExpression = builder.conditionExpression;
         this.returnConsumedCapacity = builder.returnConsumedCapacity;
         this.returnItemCollectionMetrics = builder.returnItemCollectionMetrics;
+        this.counterDelta = builder.counterDelta;
     }
 
     /**
@@ -72,7 +74,8 @@ public final class UpdateItemEnhancedRequest<T> {
                                .ignoreNulls(ignoreNulls)
                                .conditionExpression(conditionExpression)
                                .returnConsumedCapacity(returnConsumedCapacity)
-                               .returnItemCollectionMetrics(returnItemCollectionMetrics);
+                               .returnItemCollectionMetrics(returnItemCollectionMetrics)
+                               .counterDelta(counterDelta);
     }
 
     /**
@@ -135,6 +138,10 @@ public final class UpdateItemEnhancedRequest<T> {
         return returnItemCollectionMetrics;
     }
 
+    public Integer counterDelta() {
+        return  counterDelta;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -172,6 +179,7 @@ public final class UpdateItemEnhancedRequest<T> {
         private Expression conditionExpression;
         private String returnConsumedCapacity;
         private String returnItemCollectionMetrics;
+        private Integer counterDelta;
 
         private Builder() {
         }
@@ -254,6 +262,11 @@ public final class UpdateItemEnhancedRequest<T> {
          */
         public Builder<T> returnItemCollectionMetrics(String returnItemCollectionMetrics) {
             this.returnItemCollectionMetrics = returnItemCollectionMetrics;
+            return this;
+        }
+
+        public Builder<T> counterDelta(Integer counterDelta) {
+            this.counterDelta = counterDelta;
             return this;
         }
 

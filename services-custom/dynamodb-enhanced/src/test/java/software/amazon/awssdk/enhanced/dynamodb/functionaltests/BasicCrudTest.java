@@ -523,6 +523,7 @@ public class BasicCrudTest extends LocalDynamoDbSyncTestBase {
         Record record2 = new Record()
                                .setId("id-value")
                                .setSort("sort-value")
+                               .setAttribute2(null)
                                .setAttribute("four");
         Record result = mappedTable.updateItem(UpdateItemEnhancedRequest.builder(Record.class)
                                                                         .item(record2)

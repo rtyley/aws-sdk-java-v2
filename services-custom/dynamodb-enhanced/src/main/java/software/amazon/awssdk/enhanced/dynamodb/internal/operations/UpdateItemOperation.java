@@ -36,7 +36,10 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.extensions.WriteModification;
 import software.amazon.awssdk.enhanced.dynamodb.internal.EnhancedClientUtils;
 import software.amazon.awssdk.enhanced.dynamodb.internal.extensions.DefaultDynamoDbExtensionContext;
+import software.amazon.awssdk.enhanced.dynamodb.internal.mapper.AtomicCounter;
+import software.amazon.awssdk.enhanced.dynamodb.internal.extensions.AtomicCounterTag;
 import software.amazon.awssdk.enhanced.dynamodb.internal.mapper.UpdateBehaviorTag;
+import software.amazon.awssdk.enhanced.dynamodb.internal.update.UpdateExpressionBuilder;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.UpdateBehavior;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactUpdateItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
@@ -103,11 +106,11 @@ public class UpdateItemOperation<T>
         WriteModification transformation =
             extension != null
             ? extension.beforeWrite(DefaultDynamoDbExtensionContext.builder()
-                                                                                     .items(itemMap)
-                                                                                     .operationContext(operationContext)
-                                                                                     .tableMetadata(tableMetadata)
-                                                                                     .tableSchema(tableSchema)
-                                                                                     .build())
+                                                                   .items(itemMap)
+                                                                   .operationContext(operationContext)
+                                                                   .tableMetadata(tableMetadata)
+                                                                   .tableSchema(tableSchema)
+                                                                   .build())
             : null;
 
         if (transformation != null && transformation.transformedItem() != null) {
@@ -195,66 +198,6 @@ public class UpdateItemOperation<T>
                                 .build();
     }
 
-    private static Expression generateUpdateExpression(Map<String, AttributeValue> attributeValuesToUpdate,
-                                                       TableMetadata tableMetadata) {
-        // Sort the updates into 'SET' or 'REMOVE' based on null value
-        List<String> updateSetActions = new ArrayList<>();
-        List<String> updateRemoveActions = new ArrayList<>();
-
-        attributeValuesToUpdate.forEach((key, value) -> {
-            if (!isNullAttributeValue(value)) {
-                UpdateBehavior updateBehavior = UpdateBehaviorTag.resolveForAttribute(key, tableMetadata);
-                updateSetActions.add(EXPRESSION_KEY_MAPPER.apply(key) + " = " +
-                        updateExpressionMapperForBehavior(updateBehavior).apply(key));
-            } else {
-                updateRemoveActions.add(EXPRESSION_KEY_MAPPER.apply(key));
-            }
-        });
-
-        // Combine the expressions
-        List<String> updateActions = new ArrayList<>();
-
-        if (!updateSetActions.isEmpty()) {
-            updateActions.add("SET " + String.join(", ", updateSetActions));
-        }
-
-        if (!updateRemoveActions.isEmpty()) {
-            updateActions.add("REMOVE " + String.join(", ", updateRemoveActions));
-        }
-
-        String updateExpression = String.join(" ", updateActions);
-
-        Map<String, AttributeValue> expressionAttributeValues =
-            attributeValuesToUpdate.entrySet()
-                                   .stream()
-                                   .filter(entry -> !isNullAttributeValue(entry.getValue()))
-                                   .collect(Collectors.toMap(
-                                       entry -> EXPRESSION_VALUE_KEY_MAPPER.apply(entry.getKey()),
-                                       Map.Entry::getValue));
-
-        Map<String, String> expressionAttributeNames =
-            attributeValuesToUpdate.keySet()
-                                   .stream()
-                                   .collect(Collectors.toMap(EXPRESSION_KEY_MAPPER, key -> key));
-
-        return Expression.builder()
-                         .expression(updateExpression)
-                         .expressionValues(Collections.unmodifiableMap(expressionAttributeValues))
-                         .expressionNames(expressionAttributeNames)
-                         .build();
-    }
-
-    private static Function<String, String> updateExpressionMapperForBehavior(UpdateBehavior updateBehavior) {
-        switch (updateBehavior) {
-            case WRITE_ALWAYS:
-                return EXPRESSION_VALUE_KEY_MAPPER;
-            case WRITE_IF_NOT_EXISTS:
-                return CONDITIONAL_UPDATE_MAPPER;
-            default:
-                throw new IllegalArgumentException("Unsupported update behavior '" + updateBehavior + "'");
-        }
-    }
-
     private UpdateItemRequest.Builder addExpressionsIfExist(WriteModification transformation,
                                                             Map<String, AttributeValue> filteredAttributeValues,
                                                             UpdateItemRequest.Builder requestBuilder,
@@ -265,7 +208,8 @@ public class UpdateItemOperation<T>
 
         /* Add update expression for transformed non-key attributes if applicable */
         if (!filteredAttributeValues.isEmpty()) {
-            Expression fullUpdateExpression = generateUpdateExpression(filteredAttributeValues, tableMetadata);
+            Expression fullUpdateExpression = UpdateExpressionBuilder.generateUpdateExpression(filteredAttributeValues,
+                                                                                               tableMetadata);
             expressionNames = fullUpdateExpression.expressionNames();
             expressionValues = fullUpdateExpression.expressionValues();
             requestBuilder = requestBuilder.updateExpression(fullUpdateExpression.expression());
